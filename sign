@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Thin wrapper so you don't type the venv path. Usage: ./sign collect isl A -n 60
+exec "$(dirname "$(readlink -f "$0")")/.venv/bin/python" \
+     "$(dirname "$(readlink -f "$0")")/sign.py" "$@"
