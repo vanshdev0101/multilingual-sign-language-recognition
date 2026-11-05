@@ -37,7 +37,7 @@ sign rotated a few degrees otherwise falls outside its own class.
 |---|---|---|---|---|
 | `isl` | own recordings | 17 | 1,020 → 10,200 aug | **12/17 live** (see note) |
 | `isldata` | [Kaggle ISL](https://www.kaggle.com/datasets/prathumarikeri/indian-sign-language-isl) | 35 | 13,396 | **0.993** held-out |
-| `asl` | [HF asl_sign_languages_alphabets_v03](https://huggingface.co/datasets/Marxulia/asl_sign_languages_alphabets_v03) | 26 | 10,613 | **0.799** held-out |
+| `asl` | [HF asl_sign_languages_alphabets_v03](https://huggingface.co/datasets/Marxulia/asl_sign_languages_alphabets_v03) | 26 | 10,613 | **0.799** held-out, **5/6 live** |
 
 Reproduce any row with `./sign evaluate <lang>`.
 
@@ -45,22 +45,43 @@ Held-out figures use a **contiguous** split that keeps mirrored pairs and adjace
 Random k-fold on this data reports 0.99+ because consecutive frames of a held pose are near-duplicates
 and leak across folds — that number is not meaningful and is not reported here.
 
-The live figure was measured by performing each sign fresh at the camera, before mirror/rotation
-augmentation was added. Augmentation raised accuracy on simulated rotated poses from **0.761 to 0.972**;
-the live test was not repeated after.
+Live figures were measured by performing each sign fresh at the camera with `./sign livetest`. The `isl`
+live figure predates mirror/rotation augmentation and was not re-measured after; the `asl` figure is
+post-augmentation.
 
-### The interesting part: landmarks don't survive a new signer
+### The interesting part: augmentation is what makes a dataset model transfer
 
-`isldata` scores 0.989 held-out and is useless on the author's hands. Measured directly:
+Trained naively, `isldata` scores 0.993 held-out and is useless on a new signer. Measured on the
+author's hand signing A:
 
 - distance between two samples of the same class, within the dataset: **0.184**
-- distance from a live hand signing A to the nearest training point: **1.734** (~9×)
+- distance from the live hand to the nearest training point: **1.734** (~9x)
 - prediction: **D**, at confidence 1.00
 
-k-NN confidence is meaningless here — it reports the nearest class, not whether that class is plausible.
-The same effect reappears within a single signer's own data: `isl` scores 0.999 cross-validated and
-0.71 live. **Public-dataset accuracy does not predict live accuracy**, which is why the demo model is
-trained on recordings from the person demoing it. This is the project's actual finding.
+k-NN confidence is worthless here: it reports the nearest class, not whether that class is plausible.
+This is the usual reason a model with a headline accuracy fails in front of a camera.
+
+The cause is pose variance, not the representation. A dataset of held poses, and recordings of held
+poses, both produce near-identical samples (class radius ~0.05), so a live hand rotated a few degrees
+falls outside every class. Adding mirrored and +/-12 deg rotated copies at training time widens each
+class to cover variation a signer actually produces. On rotated held-out poses this lifts accuracy from
+**0.761 to 0.972**, and it changes live behaviour qualitatively:
+
+| live test (new signer, dataset-trained model) | result | median distance |
+|---|---|---|
+| `isldata`, before augmentation | A predicted as **D** | 1.734 |
+| `asl`, after augmentation | **5/6** letters correct | 0.19 - 0.39 |
+| `isldata` digits, after augmentation | 2/5 correct, but matched at close range | 0.25 - 0.73 |
+
+The remaining `isldata` errors are not transfer failures. They were 1 -> I, 2 -> V, 3 -> 8, and those
+classes overlap *within the source dataset*: 1 vs I have a centroid gap of 0.80 against class radii of
+1.65 and 1.98, so the gap is smaller than the spread. The digits are the closest cluster in the whole
+35-class set (3-4 at 0.40). Those labels are not separable from the source data, with or without a
+new signer.
+
+**Conclusion: a dataset-trained landmark model does transfer to a new signer, provided training covers
+pose variation the dataset itself does not contain.** Reported cross-validation accuracy says nothing
+about either property.
 
 ## Usage
 
@@ -93,7 +114,8 @@ blank devices are skipped automatically.
   they are the same handshape.
 - **Two-handed signs need both hands in frame.** If one leaves the frame the vector matches a one-handed
   sign instead. This caused every W→H error observed.
-- **Dataset-trained models do not transfer to new signers** (see above).
+- **Digits 1-9 in the Kaggle ISL set are not reliably separable** from each other or from their letter
+  lookalikes (1/I, 2/V, 3/8) - an ambiguity in the source labels, not the model.
 
 ## Tests
 
