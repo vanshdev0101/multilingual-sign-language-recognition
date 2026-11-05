@@ -1,15 +1,3 @@
-#!/usr/bin/env python3
-"""Multilingual static sign detector: MediaPipe hand landmarks -> KNN, one model per language.
-
-  python sign.py probe                   # headless camera + landmarker check
-  python sign.py collect isl A [-n 60]   # hold the pose, SPACE starts/pauses recording
-  python sign.py train isl
-  python sign.py run isl asl             # live demo; 'l' cycles language, 'c' clears text, 'q' quits
-  python sign.py selftest
-
-ponytail: static poses only (no motion signs). Upgrade path = swap KNN for a small
-LSTM/GRU over a 30-frame landmark window; feature extraction below stays as-is.
-"""
 import sys, time, pickle, argparse
 import collections
 from collections import deque, Counter
