@@ -45,9 +45,9 @@ Held-out figures use a **contiguous** split that keeps mirrored pairs and adjace
 Random k-fold on this data reports 0.99+ because consecutive frames of a held pose are near-duplicates
 and leak across folds — that number is not meaningful and is not reported here.
 
-Live figures were measured by performing each sign fresh at the camera with `./sign livetest`. The `isl`
-live figure predates mirror/rotation augmentation and was not re-measured after; the `asl` figure is
-post-augmentation.
+Live figures were measured by performing each sign fresh at the camera with `./sign livetest`, after
+mirror/rotation augmentation. The 17 `isl` letters last measured 12/17 live before augmentation was
+added and were not re-tested after; the 9 digits measured 9/9 after.
 
 ### The interesting part: augmentation is what makes a dataset model transfer
 
@@ -75,9 +75,12 @@ class to cover variation a signer actually produces. On rotated held-out poses t
 
 The remaining `isldata` errors (1 -> I, 2 -> V, 3 -> 8) are a performance gap, not label ambiguity:
 inside the dataset the digits are perfectly separable, **1081/1081 held-out, every digit at 1.000**.
-The author's digit handshapes simply differ from that dataset's, exactly as the letters did before
-being re-recorded. Centroid distance suggests otherwise (1 vs I gap 0.80) but is the wrong metric here:
-ingest mirrors every image, so each class holds two mirrored clusters and its apparent radius is
+The prediction was confirmed directly - re-recording the same nine digits from the author's own hands
+and retraining gives **9/9 live at distances of 0.14-0.34**. The handshapes simply differed from that
+dataset signer's.
+
+Centroid distance suggests ambiguity where there is none (1 vs I gap 0.80) and is the wrong metric
+here: ingest mirrors every image, so each class holds two mirrored clusters and its apparent radius is
 inflated. k-NN handles multi-modal classes; centroid separation does not describe it.
 
 **Conclusion: a dataset-trained landmark model does transfer to a new signer, provided training covers
