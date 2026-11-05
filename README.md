@@ -131,3 +131,18 @@ blank devices are skipped automatically.
 ## Licence
 
 MIT
+
+## Web demo
+
+`web/` is a static page that runs the whole pipeline in the browser — MediaPipe's JS hand
+tracker plus the exported k-NN model (`model.bin`, `model.json`). No server, no upload: the
+video never leaves the machine.
+
+```bash
+cd web && python3 -m http.server 8000   # then open http://localhost:8000
+```
+
+It also lets a visitor **teach it their own hand**. Hands differ in size and angle, and a model
+trained on one signer misreads another — the finding above, turned into a feature. Recording a
+sign in the browser stores those samples in `localStorage` and matches them ahead of the shipped
+ones, so the page adapts to whoever is using it without retraining anything.
