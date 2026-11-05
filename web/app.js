@@ -286,8 +286,16 @@ els.start.addEventListener("click", async () => {
     loop();
   } catch (e) {
     els.start.disabled = false;
-    setStatus("Camera blocked", "err");
-    els.gateText.textContent = "Camera permission was refused. Allow it in your browser, then try again.";
+    setStatus("Camera unavailable", "err");
+    const why = {
+      NotAllowedError: "Chrome is blocking the camera for this site. Click the camera or lock icon in the address bar, set Camera to Allow, then reload.",
+      NotFoundError: "No camera was found. Plug one in, or check it is not disabled by a hardware switch.",
+      NotReadableError: "Another program is already using the camera. Close it and try again.",
+      OverconstrainedError: "The camera does not support the requested resolution.",
+      SecurityError: "Cameras only work on localhost or over https.",
+    }[e.name];
+    els.gateText.textContent = (why || "Could not open the camera.") + `  (${e.name})`;
+    console.error(e);
   }
 });
 
