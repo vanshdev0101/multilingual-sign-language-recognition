@@ -467,6 +467,44 @@ def cmd_livetest(lang, labels, cam=None, delay=4, hold=3):
     print(f"live accuracy: {correct}/{len(results)} = {correct/max(1,len(results)):.2f}")
 
 
+def cmd_evaluate(lang, frac=0.7, augment=2):
+    """Held-out accuracy on a stored dataset, using a split that does not leak.
+
+    Samples of a class sit contiguously in image/frame order, so the split is
+    contiguous too: adjacent video frames and mirrored pairs stay on the same side.
+    Random k-fold reports ~0.99 on this data purely because consecutive frames of a
+    held pose are near-duplicates. Augmentation is applied to the training side only.
+    """
+    from sklearn.neighbors import KNeighborsClassifier
+    X, y = load_dataset(lang)
+    y = np.array(y)
+    if len(X) == 0:
+        sys.exit(f"no data for {lang}")
+    labs = sorted(set(y.tolist()))
+    tr, te = [], []
+    for l in labs:
+        idx = np.where(y == l)[0]
+        cut = int(len(idx) * frac) - (int(len(idx) * frac) % 2)   # keep mirrored pairs together
+        tr += list(idx[:cut]); te += list(idx[cut:])
+    rng = np.random.default_rng(0)
+    Xt, yt = list(X[tr]), list(y[tr])
+    Xt += [mirror_features(v) for v in X[tr]]; yt += list(y[tr])
+    for v, l in zip(X[tr], y[tr]):
+        for _ in range(augment):
+            Xt.append(jitter_features(v, rng)); yt.append(l)
+    clf = KNeighborsClassifier(n_neighbors=5, weights="distance").fit(np.asarray(Xt, np.float32), yt)
+    pred = clf.predict(X[te])
+    acc = float((pred == y[te]).mean())
+    err = collections.Counter((t, p) for t, p in zip(y[te], pred) if t != p)
+    print(f"{lang}: held-out accuracy {acc:.3f}  ({len(labs)} classes, train={len(Xt)}, test={len(te)})")
+    print(f"  top confusions: {err.most_common(5) or 'none'}")
+    per = collections.defaultdict(lambda: [0, 0])
+    for t, pr in zip(y[te], pred):
+        per[t][1] += 1; per[t][0] += (t == pr)
+    worst = sorted((c / n, k) for k, (c, n) in per.items())[:5]
+    print(f"  weakest classes: {[(k, round(a, 2)) for a, k in worst]}")
+
+
 def cmd_selftest():
     rng = np.random.default_rng(0)
     base = rng.normal(size=(21, 3)).astype(np.float32)
@@ -565,6 +603,7 @@ def main():
     pr = sub.add_parser("probe"); pr.add_argument("-n", type=int, default=30); pr.add_argument("--cam", type=int)
     lt = sub.add_parser("livetest"); lt.add_argument("lang"); lt.add_argument("labels", nargs="+")
     lt.add_argument("--cam", type=int); lt.add_argument("--delay", type=int, default=4)
+    ev = sub.add_parser("evaluate"); ev.add_argument("lang")
     sub.add_parser("selftest")
     a = ap.parse_args()
     if a.cmd == "collect":
@@ -577,6 +616,8 @@ def main():
         cmd_train(a.lang, not a.no_mirror, a.augment)
     elif a.cmd == "run":
         cmd_run(a.langs, a.cam, a.max_dist)
+    elif a.cmd == "evaluate":
+        cmd_evaluate(a.lang)
     elif a.cmd == "livetest":
         cmd_livetest(a.lang, a.labels, a.cam, a.delay)
     elif a.cmd == "probe":

@@ -36,8 +36,10 @@ sign rotated a few degrees otherwise falls outside its own class.
 | Model | Source | Classes | Samples | Accuracy |
 |---|---|---|---|---|
 | `isl` | own recordings | 17 | 1,020 → 10,200 aug | **12/17 live** (see note) |
-| `isldata` | [Kaggle ISL](https://www.kaggle.com/datasets/prathumarikeri/indian-sign-language-isl) | 35 | 13,396 | **0.989** held-out |
+| `isldata` | [Kaggle ISL](https://www.kaggle.com/datasets/prathumarikeri/indian-sign-language-isl) | 35 | 13,396 | **0.993** held-out |
 | `asl` | [HF asl_sign_languages_alphabets_v03](https://huggingface.co/datasets/Marxulia/asl_sign_languages_alphabets_v03) | 26 | 10,613 | **0.799** held-out |
+
+Reproduce any row with `./sign evaluate <lang>`.
 
 Held-out figures use a **contiguous** split that keeps mirrored pairs and adjacent video frames together.
 Random k-fold on this data reports 0.99+ because consecutive frames of a held pose are near-duplicates
@@ -72,7 +74,8 @@ curl -sSfL -o models/hand_landmarker.task \
 ./sign probe                             # camera + detector check, no window
 ./sign collect isl A B C -n 60 --delay 8 # hands-free: countdown, then auto-record
 ./sign train isl
-./sign livetest isl A B C                # accuracy on fresh performances
+./sign livetest isl A B C                # accuracy on fresh performances (live, at the camera)
+./sign evaluate asl                      # held-out accuracy on a stored dataset
 ./sign run isl asl                       # live demo; 'l' switches language
 ```
 
