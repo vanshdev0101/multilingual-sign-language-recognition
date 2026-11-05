@@ -73,11 +73,12 @@ class to cover variation a signer actually produces. On rotated held-out poses t
 | `asl`, after augmentation | **5/6** letters correct | 0.19 - 0.39 |
 | `isldata` digits, after augmentation | 2/5 correct, but matched at close range | 0.25 - 0.73 |
 
-The remaining `isldata` errors are not transfer failures. They were 1 -> I, 2 -> V, 3 -> 8, and those
-classes overlap *within the source dataset*: 1 vs I have a centroid gap of 0.80 against class radii of
-1.65 and 1.98, so the gap is smaller than the spread. The digits are the closest cluster in the whole
-35-class set (3-4 at 0.40). Those labels are not separable from the source data, with or without a
-new signer.
+The remaining `isldata` errors (1 -> I, 2 -> V, 3 -> 8) are a performance gap, not label ambiguity:
+inside the dataset the digits are perfectly separable, **1081/1081 held-out, every digit at 1.000**.
+The author's digit handshapes simply differ from that dataset's, exactly as the letters did before
+being re-recorded. Centroid distance suggests otherwise (1 vs I gap 0.80) but is the wrong metric here:
+ingest mirrors every image, so each class holds two mirrored clusters and its apparent radius is
+inflated. k-NN handles multi-modal classes; centroid separation does not describe it.
 
 **Conclusion: a dataset-trained landmark model does transfer to a new signer, provided training covers
 pose variation the dataset itself does not contain.** Reported cross-validation accuracy says nothing
@@ -114,8 +115,8 @@ blank devices are skipped automatically.
   they are the same handshape.
 - **Two-handed signs need both hands in frame.** If one leaves the frame the vector matches a one-handed
   sign instead. This caused every W→H error observed.
-- **Digits 1-9 in the Kaggle ISL set are not reliably separable** from each other or from their letter
-  lookalikes (1/I, 2/V, 3/8) - an ambiguity in the source labels, not the model.
+- **Transfer is per-handshape, not per-model.** A dataset model recognises signs you perform the way
+  its signers did. Where your handshape differs, re-record that label; the pipeline mixes sources fine.
 
 ## Tests
 
