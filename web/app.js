@@ -275,6 +275,17 @@ async function init() {
 }
 
 els.start.addEventListener("click", async () => {
+  // getUserMedia only exists in a secure context: https, localhost or 127.0.0.1.
+  // Opening the address the dev server prints (0.0.0.0, or a LAN IP) silently
+  // removes navigator.mediaDevices, so say so instead of throwing.
+  if (!navigator.mediaDevices?.getUserMedia) {
+    const where = location.hostname || "this address";
+    setStatus("Not a secure page", "err");
+    els.gateText.textContent =
+      `Browsers only allow the camera on https, localhost or 127.0.0.1 — not on "${where}". ` +
+      `Open http://localhost:${location.port || 80}${location.pathname} instead.`;
+    return;
+  }
   els.start.disabled = true;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 960, height: 720 } });
